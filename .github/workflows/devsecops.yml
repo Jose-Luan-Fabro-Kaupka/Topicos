@@ -1,0 +1,65 @@
+name: CI/CD DevSecOps Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+  security-scans:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Snyk: Scan for vulnerabilities
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test
+
+      - name: Install Njsscan
+        run: npm install -g njsscan
+
+      - name: Njsscan: Static Analysis
+        run: njsscan . --rulesets default
+
+      - name: DAST with OWASP ZAP (optional)
+        uses: zaproxy/action-full-scan@v0.4.0
+        with:
+          target: 'http://localhost:3000'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fail if vulnerabilities found
+        run: |
+          if grep -R "High" ./; then
+            echo "Vulnerabilidades críticas detectadas, abortando deploy.";
+            exit 1;
+          fi
