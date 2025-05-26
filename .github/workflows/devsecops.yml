@@ -52,10 +52,10 @@ jobs:
 
       - name: DAST with OWASP ZAP (optional)
         uses: zaproxy/action-full-scan@v0.4.0
-        with:
-          target: 'http://localhost:3000'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          target: 'http://localhost:3000'
 
       - name: Fail if vulnerabilities found
         run: |
